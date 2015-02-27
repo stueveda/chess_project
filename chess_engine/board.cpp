@@ -39,6 +39,44 @@ U64 Board::getWKings()
 	return w_kings;
 }
 
+U64 Board::getWPawnsAttack()
+{
+	// Need to consider En Passant file
+	U64 attacked;
+	return w_pawns;
+}
+
+U64 Board::getWKnightsAttack()
+{
+	U64 attacked;
+	return w_knights;
+}
+
+U64 Board::getWBishopsAttack()
+{
+	U64 attacked;
+	return w_bishops;
+}
+
+U64 Board::getWRooksAttack()
+{
+	U64 attacked;
+	return w_rooks;
+}
+		
+U64 Board::getWQueensAttack()
+{
+	U64 attacked;
+	return w_queens;
+}
+
+U64 Board::getWKingsAttack()
+{
+	U64 attacked;
+	return w_kings;
+}
+
+
 /**************** GET BLACK OPERATIONS ***************/
 
 U64 Board::getBPawns()
@@ -68,6 +106,43 @@ U64 Board::getBQueens()
 
 U64 Board::getBKings()
 {
+	return b_kings;
+}
+
+U64 Board::getBPawnsAttack()
+{
+	// Need to consider En Passant file
+	U64 attacked;
+	return b_pawns;
+}
+
+U64 Board::getBKnightsAttack()
+{
+	U64 attacked;
+	return b_knights;
+}
+
+U64 Board::getBBishopsAttack()
+{
+	U64 attacked;
+	return b_bishops;
+}
+
+U64 Board::getBRooksAttack()
+{
+	U64 attacked;
+	return b_rooks;
+}
+		
+U64 Board::getBQueensAttack()
+{
+	U64 attacked;
+	return b_queens;
+}
+
+U64 Board::getBKingsAttack()
+{
+	U64 attacked;
 	return b_kings;
 }
 
@@ -167,7 +242,7 @@ void Board::setBKings(U64 n)
 /************ SET GENERAL OPERATIONS ***********/
 
 /*
-A useful function to set up the initial position of the board.
+set the initial position of the board
 */
 void Board::setInitialPosition()
 {
@@ -180,9 +255,9 @@ void Board::setInitialPosition()
 	// 2^0 + 2^7
 	setWRooks(0x0000000000000081);
 	// 2^3
-	setWQueens(0x0000000000000008);
+	setWQueens(0x0000000000000010);
 	// 2^4
-	setWKings(0x0000000000000010);
+	setWKings(0x0000000000000008);
 
 	// 2^48 + 2^49 + 2^50 + 2^51 + 2^52 + 2^53 + 2^54 + 2^55
 	setBPawns(0x00FF000000000000);
@@ -193,14 +268,7 @@ void Board::setInitialPosition()
 	// 2^56 + 2^63
 	setBRooks(0x8100000000000000);
 	// 2^59
-	setBQueens(0x0800000000000000);
+	setBQueens(0x1000000000000000);
 	// 2^60
-	setBKings(0x1000000000000000);
-}
-
-/************* OUTPUT OPERATIONS ****************/
-
-void Board::print(U64 n)
-{
-	// Implement later - plan to have it output an 8x8 board-looking matrix
+	setBKings(0x0800000000000000);
 }

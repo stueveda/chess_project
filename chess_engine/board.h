@@ -47,6 +47,13 @@ class Board
 		U64 getWQueens();
 		U64 getWKings();
 
+		U64 getWPawnsAttack();
+		U64 getWKnightsAttack();
+		U64 getWBishopsAttack();
+		U64 getWRooksAttack();
+		U64 getWQueensAttack();
+		U64 getWKingsAttack();
+
 		/**************** GET BLACK OPERATIONS ***************/
 		U64 getBPawns();
 		U64 getBKnights();
@@ -54,6 +61,13 @@ class Board
 		U64 getBRooks();
 		U64 getBQueens();
 		U64 getBKings();
+
+		U64 getBPawnsAttack();
+		U64 getBKnightsAttack();
+		U64 getBBishopsAttack();
+		U64 getBRooksAttack();
+		U64 getBQueensAttack();
+		U64 getBKingsAttack();
 
 		/****************** GET GENERAL OPERATIONS ******************/
 		U64 getWPieces();
@@ -78,7 +92,4 @@ class Board
 
 		/************ SET GENERAL OPERATIONS ***********/
 		void setInitialPosition();
-
-		/************ OUTPUT OPERATIONS *************/
-		void print(U64 n);
 };
