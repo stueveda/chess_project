@@ -4,6 +4,7 @@
 
 // defines the size of the move history array
 #define MAXMOVES 2048
+#define MAXPOSITIONMOVES 256
 
 /*
 We'll be using an unsigned 64-bit integer (Referred to as U64 throughout
@@ -33,6 +34,52 @@ enum
 	BLACK, WHITE
 };
 
+enum 
+{
+	NONE,
+	wP, wN, wB, wR, wQ, wK,
+	bP, bN, bB, bR, bQ, bK
+};
+
+
+struct MOVE
+{
+	/* bits:
+		0 - 6 denote from square						(7 bits)
+		7 - 13 denote to square							(7 bits)
+		14 - 17 denote type of piece captured			(4 bits)
+		18 denotes whether it was an en passant capture	(1 bit)
+		19 denotes whether it was a pawn start move		(1 bit)
+		20 - 23 denotes what piece a pawn promoted to	(4 bits)
+		24 denotes if it was a castle move				(1 bit)
+	*/
+	int move;
+	int value;
+};
+
+// define some macros to make extracting data from the move int easier
+#define FROMSQ(move) ((move) & 0x7F)
+#define TOSQ(move) (((move) >> 7) & 0x7F)
+#define CAP_PIECE(move) (((move) >> 14) & 0xF)
+#define PROM_PIECE(move) (((move) >> 20) & 0xF)
+
+#define EP_FLAG 0x40000
+#define PS_FLAG 0x80000
+#define CAS_FLAG 0x1000000
+
+#define M_MOVE(from, to, cap, prom, flag) \
+								  ((from) \
+								| ((to) << 7) \
+								| ((cap) << 14) \
+								| ((prom) << 20) \
+								| ((flag)))
+
+struct MOVE_LIST
+{
+	MOVE moves[MAXPOSITIONMOVES];
+	int count;
+};
+
 // structure for holding all of the moves played in the game
 struct MOVE_HISTORY
 {
@@ -45,8 +92,10 @@ struct MOVE_HISTORY
 	U64 position_key;
 };
 
+/******************** FUNCTIONS.CPP FUNCTIONS **************/
+int countBits(U64 bitboard);
+int popFirstSetBit(U64 &bitboard);
+char *printMove(const int move);
+char *printSquare(const int sq);
 
-/******************** BITBOARD.CPP FUNCTIONS **************/
-int countSetBits(U64 bitboard);
-int popFirstSetBit(U64 *bitboard);
 #endif

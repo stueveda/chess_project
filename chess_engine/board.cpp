@@ -9,7 +9,7 @@
 
 
 // used for printBoard - corresponds to bitboardArray
-char pieceLookup[] = "PNBRQKpnbrqk";
+char pieceLookup[] = ".PNBRQKpnbrqk";
 
 // returns the bitboard of the specified piece type
 U64 Board::getPieceBitboard(int piece_type)
@@ -49,6 +49,24 @@ U64 Board::getBPieces()
 U64 Board::getAllPieces()
 {
 	return getWPieces() | getBPieces();
+}
+
+// returns the bitboard indicating empty squares
+U64 Board::getEmpty()
+{
+	return ~getAllPieces();
+}
+
+int Board::getPieceType(int sq)
+{
+	U64 bb = (1ULL << sq);
+	for (int i = 0; i < 13; i++)
+	{
+		if ((bb & getPieceBitboard(i)) == bb)
+		{
+			return i;
+		}
+	}
 }
 
 // returns whether the specified square is attacked by the specified side
@@ -794,6 +812,7 @@ bool Board::isSqAttacked(const int sq, const bool side)
 // sets up the initial state of the board
 void Board::setInitial()
 {
+	setPieceBitboard(NONE, 0x0);
 	// 2^8 + 2^9 + 2^10 + 2^11 + 2^12 + 2^13 + 2^14 + 2^15
 	setPieceBitboard(wP, 0x000000000000FF00);
 	// 2^1 + 2^6
@@ -834,6 +853,7 @@ void Board::setInitial()
 // sets the ply to 1
 void Board::clearBoard()
 {
+	setPieceBitboard(NONE, 0ULL);
 	setPieceBitboard(wP, 0ULL);
 	setPieceBitboard(wN, 0ULL);
 	setPieceBitboard(wB, 0ULL);
@@ -876,7 +896,7 @@ void Board::printBoard()
 			// otherwise, print the piece using the lookup array
 			else
 			{
-				for (i = 0; i < 12; i++)
+				for (i = 0; i < 13; i++)
 				{
 					if ((board_square & getPieceBitboard(i)) == board_square)
 						break;
@@ -948,7 +968,7 @@ int Board::parseFEN(char *fen)
 			case '6':
 			case '7':
 			case '8':
-				piece_type = -1;
+				piece_type = 0;
 				count = *fen - '0';
 				break;
 
@@ -966,10 +986,7 @@ int Board::parseFEN(char *fen)
 		for (int i = 0; i < count; i++)
 		{
 			square = rank * 8 + file;
-			if (piece_type != -1)
-			{
-				bitboardArray[piece_type] |= (1ULL << square);
-			}
+			bitboardArray[piece_type] |= (1ULL << square);
 			file++;
 		}
 		fen++;
@@ -1039,4 +1056,208 @@ void Board::printAttacked(const bool side)
 		std::cout << '\n';
 	}
 	std::cout << "\n";
+}
+
+
+/************** MOVE GENERATION ***************/
+void Board::addQuietMove(int move)
+{
+	move_list->moves[move_list->count].move = move;
+	move_list->moves[move_list->count].value = 0;
+	move_list->count++;
+}
+
+void Board::addCaptureMove(int move)
+{
+	move_list->moves[move_list->count].move = move;
+	move_list->moves[move_list->count].value = 0;
+	move_list->count++;
+}
+
+void Board::addEnPassantMove(int move)
+{
+	move_list->moves[move_list->count].move = move;
+	move_list->moves[move_list->count].value = 0;
+	move_list->count++;
+}
+
+void Board::generateAllMoves()
+{
+	move_list->count = 0;
+
+	int sq;
+	int rank;
+	int file;
+	U64 t_bb;
+	
+
+	if (side_to_move == WHITE)
+	{
+		// White pawn
+		U64 piece_bb = getPieceBitboard(wP);
+		int piece_count = countBits(piece_bb);
+		U64 &ref_bb = piece_bb;
+		for (int i = 0; i < piece_count; i++)
+		{
+			sq = popFirstSetBit(ref_bb);
+			rank = sq / 8;
+			file = sq % 8;
+			
+			t_bb = (1ULL << (sq + 8));
+			if ((rank < 7) && ((getEmpty() & (t_bb)) == t_bb))
+			{
+				addWPawnMove(sq, (sq + 8));
+				t_bb = (1ULL << (sq + 16));
+				if ((rank == 1) && ((getEmpty() & (t_bb)) == t_bb))
+				{
+					addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+				}
+			}
+
+			t_bb = (1ULL << (sq + 7));
+			if ((file != 0) && ((getBPieces() & t_bb) == t_bb))
+			{
+				addWPawnCapMove(sq, (sq+7), getPieceType(sq+7));
+			}
+			
+			t_bb = (1ULL << (sq + 9));
+			if ((file != 7) && ((getBPieces() & t_bb) == t_bb))
+			{
+				addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
+			}
+
+			if ((file != 0) && (sq + 7 == ep_square))
+			{
+				addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
+			}
+			if ((file != 7) && (sq + 9 == ep_square))
+			{
+				addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+			}
+		}
+	}
+	else
+	{
+		// Black pawn
+		U64 piece_bb = getPieceBitboard(bP);
+		int piece_count = countBits(piece_bb);
+		U64 &ref_bb = piece_bb;
+
+		for (int i = 0; i < piece_count; i++)
+		{
+			sq = popFirstSetBit(ref_bb);
+			rank = sq / 8;
+			file = sq % 8;
+			
+			t_bb = (1ULL << (sq - 8));
+			if ((rank > 0) && ((getEmpty() & (t_bb)) == t_bb))
+			{
+				addBPawnMove(sq, (sq - 8));
+				t_bb = (1ULL << (sq - 16));
+				if ((rank == 6) && ((getEmpty() & (t_bb)) == t_bb))
+				{
+					addQuietMove(M_MOVE(sq,(sq - 16),NONE,NONE,PS_FLAG));
+				}
+			}
+
+			t_bb = (1ULL << (sq - 9));
+			if ((file != 0) && ((getWPieces() & t_bb) == t_bb))
+			{
+				addBPawnCapMove(sq, (sq-9), getPieceType(sq-9));
+			}
+			
+			t_bb = (1ULL << (sq - 7));
+			if ((file != 7) && ((getWPieces() & t_bb) == t_bb))
+			{
+				addBPawnCapMove(sq, (sq-7), getPieceType(sq-7));
+			}
+
+			if ((file != 0) && (sq - 9 == ep_square))
+			{
+				addCaptureMove(M_MOVE(sq, (sq-9), NONE, NONE, EP_FLAG));
+			}
+			if ((file != 7) && (sq - 7 == ep_square))
+			{
+				addCaptureMove(M_MOVE(sq, (sq-7), NONE, NONE, EP_FLAG));
+			}
+		}
+	}
+}
+
+void Board::printMoveList()
+{
+	int index = 0;
+	int value = 0;
+	int move = 0;
+	std::cout << "Move list: " << move_list->count << " moves.\n";
+
+	for (index = 0; index < move_list->count; index++)
+	{
+		move = move_list->moves[index].move;
+		value = move_list->moves[index].value;
+
+		std::cout << "move: ";
+		printMove(move);
+		std::cout << "   value: " << value << "\n";
+	}
+}
+
+void Board::addWPawnCapMove(const int from, const int to, const int cap)
+{
+	if (from / 8 == 6)
+	{
+		addCaptureMove(M_MOVE(from, to, cap, wQ, 0));
+		addCaptureMove(M_MOVE(from, to, cap, wR, 0));
+		addCaptureMove(M_MOVE(from, to, cap, wB, 0));
+		addCaptureMove(M_MOVE(from, to, cap, wN, 0));
+	}
+	else
+	{
+		addCaptureMove(M_MOVE(from, to, NONE, NONE, 0));
+	}
+}
+
+void Board::addWPawnMove(const int from, const int to)
+{
+	if (from / 8 == 6)
+	{
+		addQuietMove(M_MOVE(from, to, NONE, wQ, 0));
+		addQuietMove(M_MOVE(from, to, NONE, wR, 0));
+		addQuietMove(M_MOVE(from, to, NONE, wB, 0));
+		addQuietMove(M_MOVE(from, to, NONE, wN, 0));
+	}
+	else
+	{
+		addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+	}
+}
+
+void Board::addBPawnCapMove(const int from, const int to, const int cap)
+{
+	if (from / 8 == 1)
+	{
+		addCaptureMove(M_MOVE(from, to, cap, bQ, 0));
+		addCaptureMove(M_MOVE(from, to, cap, bR, 0));
+		addCaptureMove(M_MOVE(from, to, cap, bB, 0));
+		addCaptureMove(M_MOVE(from, to, cap, bN, 0));
+	}
+	else
+	{
+		addCaptureMove(M_MOVE(from, to, NONE, NONE, 0));
+	}
+}
+
+void Board::addBPawnMove(const int from, const int to)
+{
+	if (from / 8 == 1)
+	{
+		addQuietMove(M_MOVE(from, to, NONE, bQ, 0));
+		addQuietMove(M_MOVE(from, to, NONE, bR, 0));
+		addQuietMove(M_MOVE(from, to, NONE, bB, 0));
+		addQuietMove(M_MOVE(from, to, NONE, bN, 0));
+	}
+	else
+	{
+		addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+	}
 }

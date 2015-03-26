@@ -10,12 +10,6 @@
 #include "defs.h"
 
 
-enum 
-{
-	wP, wN, wB, wR, wQ, wK,
-	bP, bN, bB, bR, bQ, bK
-};
-
 /*
 For almost all aspects of the Board, class members and functions will be
 prefixed with W or B, meaning the white or black pieces, respectively.
@@ -23,7 +17,7 @@ prefixed with W or B, meaning the white or black pieces, respectively.
 class Board
 {
 	private:
-		U64 bitboardArray[12];
+		U64 bitboardArray[13];
 
 		bool w_king_castle;
 		bool w_queen_castle;
@@ -36,6 +30,7 @@ class Board
 		int ply;
 
 		MOVE_HISTORY history[MAXMOVES];
+		MOVE_LIST move_list[MAXPOSITIONMOVES];
 
 	public:
 		U64 getPieceBitboard(int piece_type);
@@ -43,6 +38,8 @@ class Board
 		U64 getWPieces();
 		U64 getBPieces();
 		U64 getAllPieces();
+		U64 getEmpty();
+		int getPieceType(int sq);
 		bool isSqAttacked(const int sq, const bool side);
 
 		void clearBoard();
@@ -50,6 +47,16 @@ class Board
 		void printBoard();
 		void printAttacked(const bool side);
 
+		// move generator functions
+		void addQuietMove(int move);
+		void addCaptureMove(int move);
+		void addEnPassantMove(int move);
+		void generateAllMoves();
+		void addWPawnCapMove(const int from, const int to, const int cap);
+		void addWPawnMove(const int from, const int to);
+		void addBPawnCapMove(const int from, const int to, const int cap);
+		void addBPawnMove(const int from, const int to);
+		void printMoveList();
 
 		int parseFEN(char *fen);
 };
