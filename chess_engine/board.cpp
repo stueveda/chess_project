@@ -9,7 +9,11 @@
 
 
 // used for printBoard - corresponds to bitboardArray
-char pieceLookup[] = ".PNBRQKpnbrqk";
+const char pieceLookup[] = ".PNBRQKpnbrqk";
+
+// the attacking directions of rook and bishop sliding pieces
+const int rookDirs[] = {8, 1, -8, -1};
+const int bishopDirs[] = {9, -7, -9, 7};
 
 // returns the bitboard of the specified piece type
 U64 Board::getPieceBitboard(int piece_type)
@@ -60,13 +64,14 @@ U64 Board::getEmpty()
 int Board::getPieceType(int sq)
 {
 	U64 bb = (1ULL << sq);
-	for (int i = 0; i < 13; i++)
+	for (int i = 1; i < 13; i++)
 	{
 		if ((bb & getPieceBitboard(i)) == bb)
 		{
 			return i;
 		}
 	}
+	return NONE;
 }
 
 // returns whether the specified square is attacked by the specified side
@@ -74,202 +79,87 @@ bool Board::isSqAttacked(const int sq, const bool side)
 {
 	int rank = sq / 8;
 	int file = sq % 8;
+	int dir;
 	U64 t_bb; // temp bitboard for sliding pieces
 
 	// if the attacking side is white
 	if (side == WHITE)
 	{
 		/**************** PAWN ATTACKS *******************/
-		// white pawns can't attack anything on the 1st or 2nd ranks
-		if (rank > 1)
+		if (sq + 9 >= 0 && file > 0 && (getPieceType(sq - 9) == wP))
 		{
-			if (file != 0)
-			{
-				t_bb = 1ULL << sq - 9;
-				if ((t_bb & bitboardArray[wP]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file != 7)
-			{
-				t_bb = 1ULL << sq - 7;
-				if ((t_bb & bitboardArray[wP]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
+		}
+		if (sq + 7 >= 0 && file < 7 && (getPieceType(sq - 7) == wP))
+		{
+			return true;
 		}
 
 		/**************** KNIGHT ATTACKS *******************/
-		if (rank < 7)
+		// up 2 right 1 => +17
+		if (rank < 6 && file < 7 && (getPieceType(sq + 17) == wN))
 		{
-			if (file < 6)
-			{
-				t_bb = 1ULL << sq + 10;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 1)
-			{
-				t_bb = 1ULL << sq + 6;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank < 6)
+		// up 1 right 2 => +10
+		if (rank < 7 && file < 6 && (getPieceType(sq + 10) == wN))
 		{
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq + 17;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq + 15;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank > 0)
+		// down 2 right 1 => -15
+		if (rank > 1 && file < 7 && (getPieceType(sq - 15) == wN))
 		{
-			if (file < 6)
-			{
-				t_bb = 1ULL << sq - 6;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 1)
-			{
-				t_bb = 1ULL << sq - 10;
-				if ((t_bb& bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank > 1)
+		// down 1 right 2 => -6
+		if (rank > 1 && file < 6 && (getPieceType(sq - 6) == wN))
 		{
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq - 15;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq - 17;
-				if ((t_bb & bitboardArray[wN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
+		}
+		// up 2 left 1 => +15
+		if (rank < 6 && file > 0 && (getPieceType(sq + 15) == wN))
+		{
+			return true;
+		}
+		// up 1 left 2 => +6
+		if (rank < 7 && file > 1 && (getPieceType(sq + 6) == wN))
+		{
+			return true;
+		}
+		// down 2 left 1 => -17
+		if (rank > 1 && file > 0 && (getPieceType(sq - 17) == wN))
+		{
+			return true;
+		}
+		// down 1 left 2 => -10
+		if (rank > 1 && file > 1 && (getPieceType(sq - 10) == wN))
+		{
+			return true;
 		}
 
 		/**************** BISHOP AND QUEEN ATTACKS *******************/
-		// upper right diagonal
-		for (int t_sq = sq + 9; t_sq < 64 && t_sq >= 0; t_sq += 9)
+		for (int i = 0; i < 4; i++)
 		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
+			dir = bishopDirs[i];
+			for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
 			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wB]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
 				{
 					break;
 				}
-			}
-		}
-		// lower right diagonal
-		for (int t_sq = sq - 7; t_sq < 64 && t_sq >= 0; t_sq -= 7)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wB]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
 				{
 					break;
 				}
-			}
-		}
-		// lower left diagonal
-		for (int t_sq = sq - 9; t_sq < 64 && t_sq >= 0; t_sq -= 9)
-		{
-			// if we've moved over the left edge (A file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wB]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
+				int piece = getPieceType(t_sq);
+				if ((piece == wB) || (piece == wQ))
 				{
 					return true;
 				}
-				// if it's a different piece, break
-				else
+				else if (piece == NONE)
 				{
-					break;
+					continue;
 				}
-			}
-		}
-		// upper left diagonal
-		for (int t_sq = sq + 7; t_sq < 64 && t_sq >= 0; t_sq += 7)
-		{
-			// if we've moved over the left edge (A file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wB]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
 				else
 				{
 					break;
@@ -278,165 +168,67 @@ bool Board::isSqAttacked(const int sq, const bool side)
 		}
 
 		/**************** ROOK AND QUEEN ATTACKS *******************/
-		// up direction
-		for (int t_sq = sq + 8; t_sq < 64 && t_sq >= 0; t_sq += 8)
+		for (int i = 0; i < 4; i++)
 		{
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
+			dir = rookDirs[i];
+			for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
 			{
-				if ((t_bb & bitboardArray[wR]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
 				{
 					break;
 				}
-			}
-		}
-		// right direction
-		for (int t_sq = sq + 1; t_sq < 64 && t_sq >= 0; t_sq += 1)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wR]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
 				{
 					break;
 				}
-			}
-		}
-		// down direction
-		for (int t_sq = sq - 8; t_sq < 64 && t_sq >= 0; t_sq -= 8)
-		{
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wR]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
+				int piece = getPieceType(t_sq);
+				if ((piece == wR) || (piece == wQ))
 				{
 					return true;
 				}
-				// if it's a different piece, break
+				else if (piece == NONE)
+				{
+					continue;
+				}
 				else
 				{
 					break;
-				}
-			}
-		}
-		// left direction
-		for (int t_sq = sq - 1; t_sq < 64 && t_sq >= 0; t_sq -= 1)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[wR]) == t_bb ||
-					(t_bb & bitboardArray[wQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
-				{
-					break;
-				}
-			}
-		}
-		/**************** KING ATTACKS *******************/
-		if (rank < 7)
-		{
-			// test above
-			t_bb = 1ULL << sq + 8;
-			if ((t_bb & bitboardArray[wK]) == t_bb)
-			{
-				return true;
-			}
-			// test above and to right
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq + 9;
-				if ((t_bb & bitboardArray[wK]) == t_bb)
-				{
-					return true;
-				}
-			}
-			// test above and to left
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq + 7;
-				if ((t_bb & bitboardArray[wK]) == t_bb)
-				{
-					return true;
 				}
 			}
 		}
 
-		if (rank > 0)
+		/**************** KING ATTACKS *******************/
+		if (rank < 7 && (getPieceType(sq + 8) == wK))
 		{
-			// test below
-			t_bb = 1ULL << sq - 8;
-			if ((t_bb & bitboardArray[wK]) == t_bb)
-			{
-				return true;
-			}
-			// test below and to right
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq - 7;
-				if ((t_bb & bitboardArray[wK]) == t_bb)
-				{
-					return true;
-				}
-			}
-			// test below and to left
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq - 9;
-				if ((t_bb & bitboardArray[wK]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		// test left
-		if (file > 0)
+		if (rank < 7 && file < 7 && (getPieceType(sq + 9) == wK))
 		{
-			t_bb = 1ULL << sq - 1;
-			if ((t_bb & bitboardArray[wK]) == t_bb)
-			{
-				return true;
-			}
+			return true;
 		}
-		// test right
-		if (file < 7)
+		if (rank < 7 && file > 0 && (getPieceType(sq + 7) == wK))
 		{
-			t_bb = 1ULL << sq + 1;
-			if ((t_bb & bitboardArray[wK]) == t_bb)
-			{
-				return true;
-			}
+			return true;
+		}
+		if (rank > 0 && (getPieceType(sq - 8) == wK))
+		{
+			return true;
+		}
+		if (rank > 0 && file < 7 && (getPieceType(sq - 7) == wK))
+		{
+			return true;
+		}
+		if (rank > 0 && file > 0 && (getPieceType(sq - 9) == wK))
+		{
+			return true;
+		}
+		if (file > 0 && (getPieceType(sq + 1) == wK))
+		{
+			return true;
+		}
+		if (file < 7 && (getPieceType(sq - 1) == wK))
+		{
+			return true;
 		}
 		return false;
 	}
@@ -445,198 +237,80 @@ bool Board::isSqAttacked(const int sq, const bool side)
 	else
 	{
 		/**************** PAWN ATTACKS *******************/
-		// black pawns can't attack anything on the 7th or 8th ranks
-		if (rank < 6)
+		if (sq + 7 < 64 && file > 0 && (getPieceType(sq + 7) == bP))
 		{
-			// check up and left
-			if (file != 0)
-			{
-				t_bb = 1ULL << sq + 7;
-				if ((t_bb & bitboardArray[bP]) == t_bb)
-				{
-					return true;
-				}
-			}
-			// check up and right
-			if (file != 7)
-			{
-				t_bb = 1ULL << sq + 9;
-				if ((t_bb & bitboardArray[bP]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
+		}
+		if (sq + 9 < 64 && file < 7 && (getPieceType(sq + 9) == bP))
+		{
+			return true;
 		}
 
 		/**************** KNIGHT ATTACKS *******************/
-		if (rank < 7)
+		// up 2 right 1 => +17
+		if (rank < 6 && file < 7 && (getPieceType(sq + 17) == bN))
 		{
-			if (file < 6)
-			{
-				t_bb = 1ULL << sq + 10;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 1)
-			{
-				t_bb = 1ULL << sq + 6;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank < 6)
+		// up 1 right 2 => +10
+		if (rank < 7 && file < 6 && (getPieceType(sq + 10) == bN))
 		{
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq + 17;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq + 15;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank > 0)
+		// down 2 right 1 => -15
+		if (rank > 1 && file < 7 && (getPieceType(sq - 15) == bN))
 		{
-			if (file < 6)
-			{
-				t_bb = 1ULL << sq - 6;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 1)
-			{
-				t_bb = 1ULL << sq - 10;
-				if ((t_bb& bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		if (rank > 1)
+		// down 1 right 2 => -6
+		if (rank > 1 && file < 6 && (getPieceType(sq - 6) == bN))
 		{
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq - 15;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq - 17;
-				if ((t_bb & bitboardArray[bN]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
+		}
+		// up 2 left 1 => +15
+		if (rank < 6 && file > 0 && (getPieceType(sq + 15) == bN))
+		{
+			return true;
+		}
+		// up 1 left 2 => +6
+		if (rank < 7 && file > 1 && (getPieceType(sq + 6) == bN))
+		{
+			return true;
+		}
+		// down 2 left 1 => -17
+		if (rank > 1 && file > 0 && (getPieceType(sq - 17) == bN))
+		{
+			return true;
+		}
+		// down 1 left 2 => -10
+		if (rank > 1 && file > 1 && (getPieceType(sq - 10) == bN))
+		{
+			return true;
 		}
 
 		/**************** BISHOP AND QUEEN ATTACKS *******************/
-		// upper right diagonal
-		for (int t_sq = sq + 9; t_sq < 64 && t_sq >= 0; t_sq += 9)
+		for (int i = 0; i < 4; i++)
 		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
+			dir = bishopDirs[i];
+			for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
 			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bB]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
 				{
 					break;
 				}
-			}
-		}
-		// lower right diagonal
-		for (int t_sq = sq - 7; t_sq < 64 && t_sq >= 0; t_sq -= 7)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bB]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
 				{
 					break;
 				}
-			}
-		}
-		// lower left diagonal
-		for (int t_sq = sq - 9; t_sq < 64 && t_sq >= 0; t_sq -= 9)
-		{
-			// if we've moved over the left edge (A file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bB]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
+				int piece = getPieceType(t_sq);
+				if ((piece == bB) || (piece == bQ))
 				{
 					return true;
 				}
-				// if it's a different piece, break
-				else
+				else if (piece == NONE)
 				{
-					break;
+					continue;
 				}
-			}
-		}
-		// upper left diagonal
-		for (int t_sq = sq + 7; t_sq < 64 && t_sq >= 0; t_sq += 7)
-		{
-			// if we've moved over the left edge (A file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bB]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
 				else
 				{
 					break;
@@ -645,165 +319,67 @@ bool Board::isSqAttacked(const int sq, const bool side)
 		}
 
 		/**************** ROOK AND QUEEN ATTACKS *******************/
-		// up direction
-		for (int t_sq = sq + 8; t_sq < 64 && t_sq >= 0; t_sq += 8)
+		for (int i = 0; i < 4; i++)
 		{
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
+			dir = rookDirs[i];
+			for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
 			{
-				if ((t_bb & bitboardArray[bR]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
 				{
 					break;
 				}
-			}
-		}
-		// right direction
-		for (int t_sq = sq + 1; t_sq < 64 && t_sq >= 0; t_sq += 1)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 0)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bR]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
+				if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
 				{
 					break;
 				}
-			}
-		}
-		// down direction
-		for (int t_sq = sq - 8; t_sq < 64 && t_sq >= 0; t_sq -= 8)
-		{
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bR]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
+				int piece = getPieceType(t_sq);
+				if ((piece == bR) || (piece == bQ))
 				{
 					return true;
 				}
-				// if it's a different piece, break
+				else if (piece == NONE)
+				{
+					continue;
+				}
 				else
 				{
 					break;
-				}
-			}
-		}
-		// left direction
-		for (int t_sq = sq - 1; t_sq < 64 && t_sq >= 0; t_sq -= 1)
-		{
-			// if we've moved over the right edge (H file), break
-			if (t_sq % 8 == 7)
-			{
-				break;
-			}
-			t_bb = 1ULL << t_sq;
-			// if there's a piece on the square
-			if ((t_bb & getAllPieces()) == t_bb)
-			{
-				if ((t_bb & bitboardArray[bR]) == t_bb ||
-					(t_bb & bitboardArray[bQ]) == t_bb)
-				{
-					return true;
-				}
-				// if it's a different piece, break
-				else
-				{
-					break;
-				}
-			}
-		}
-		/**************** KING ATTACKS *******************/
-		if (rank < 7)
-		{
-			// test above
-			t_bb = 1ULL << sq + 8;
-			if ((t_bb & bitboardArray[bK]) == t_bb)
-			{
-				return true;
-			}
-			// test above and to right
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq + 9;
-				if ((t_bb & bitboardArray[bK]) == t_bb)
-				{
-					return true;
-				}
-			}
-			// test above and to left
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq + 7;
-				if ((t_bb & bitboardArray[bK]) == t_bb)
-				{
-					return true;
 				}
 			}
 		}
 
-		if (rank > 0)
+		/**************** KING ATTACKS *******************/
+		if (rank < 7 && (getPieceType(sq + 8) == bK))
 		{
-			// test below
-			t_bb = 1ULL << sq - 8;
-			if ((t_bb & bitboardArray[bK]) == t_bb)
-			{
-				return true;
-			}
-			// test below and to right
-			if (file < 7)
-			{
-				t_bb = 1ULL << sq - 7;
-				if ((t_bb & bitboardArray[bK]) == t_bb)
-				{
-					return true;
-				}
-			}
-			// test below and to left
-			if (file > 0)
-			{
-				t_bb = 1ULL << sq - 9;
-				if ((t_bb & bitboardArray[bK]) == t_bb)
-				{
-					return true;
-				}
-			}
+			return true;
 		}
-		// test left
-		if (file > 0)
+		if (rank < 7 && file < 7 && (getPieceType(sq + 9) == bK))
 		{
-			t_bb = 1ULL << sq - 1;
-			if ((t_bb & bitboardArray[bK]) == t_bb)
-			{
-				return true;
-			}
+			return true;
 		}
-		// test right
-		if (file < 7)
+		if (rank < 7 && file > 0 && (getPieceType(sq + 7) == bK))
 		{
-			t_bb = 1ULL << sq + 1;
-			if ((t_bb & bitboardArray[bK]) == t_bb)
-			{
-				return true;
-			}
+			return true;
+		}
+		if (rank > 0 && (getPieceType(sq - 8) == bK))
+		{
+			return true;
+		}
+		if (rank > 0 && file < 7 && (getPieceType(sq - 7) == bK))
+		{
+			return true;
+		}
+		if (rank > 0 && file > 0 && (getPieceType(sq - 9) == bK))
+		{
+			return true;
+		}
+		if (file > 0 && (getPieceType(sq + 1) == bK))
+		{
+			return true;
+		}
+		if (file < 7 && (getPieceType(sq - 1) == bK))
+		{
+			return true;
 		}
 		return false;
 	}
@@ -1058,7 +634,6 @@ void Board::printAttacked(const bool side)
 	std::cout << "\n";
 }
 
-
 /************** MOVE GENERATION ***************/
 void Board::addQuietMove(int move)
 {
@@ -1081,6 +656,32 @@ void Board::addEnPassantMove(int move)
 	move_list->count++;
 }
 
+void Board::addCapOrQuiet(int piece_type, int from, int to, bool side)
+{
+	if (side == WHITE)
+	{
+		if (piece_type == NONE)
+		{
+			addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+		}
+		else if (piece_type >= bP && piece_type <= bK)
+		{
+			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0));
+		}
+	}
+	else
+	{
+		if (piece_type == NONE)
+		{
+			addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+		}
+		else if (piece_type >= wP && piece_type <= wK)
+		{
+			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0));
+		}
+	}
+}
+
 void Board::generateAllMoves()
 {
 	move_list->count = 0;
@@ -1088,97 +689,621 @@ void Board::generateAllMoves()
 	int sq;
 	int rank;
 	int file;
+	int t_piece;
 	U64 t_bb;
 	
 
 	if (side_to_move == WHITE)
 	{
-		// White pawn
-		U64 piece_bb = getPieceBitboard(wP);
-		int piece_count = countBits(piece_bb);
-		U64 &ref_bb = piece_bb;
-		for (int i = 0; i < piece_count; i++)
+		U64 piece_bb;
+		int piece_count;
+		for (int piece_type = wP; piece_type <= wK; piece_type++)
 		{
-			sq = popFirstSetBit(ref_bb);
-			rank = sq / 8;
-			file = sq % 8;
-			
-			t_bb = (1ULL << (sq + 8));
-			if ((rank < 7) && ((getEmpty() & (t_bb)) == t_bb))
+			piece_bb = getPieceBitboard(piece_type);
+			int piece_count = countBits(piece_bb);
+			if (piece_count == 0)
 			{
-				addWPawnMove(sq, (sq + 8));
-				t_bb = (1ULL << (sq + 16));
-				if ((rank == 1) && ((getEmpty() & (t_bb)) == t_bb))
+				continue;
+			}
+			U64 &ref_bb = piece_bb;
+			/************************** WHITE PAWNS ***********************/
+			if (piece_type == wP)
+			{
+				for (int i = 0; i < piece_count; i++)
 				{
-					addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+
+					if ((rank < 7) && (getPieceType(sq + 8) == NONE))
+					{
+						addWPawnMove(sq, (sq + 8));
+						if ((rank == 1) && (getPieceType(sq + 16) == NONE))
+						{
+							addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+						}
+					}
+
+					t_piece = getPieceType(sq + 7);
+					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					{
+						addWPawnCapMove(sq, (sq+7), t_piece);
+					}
+					
+					t_piece = getPieceType(sq + 9);
+					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					{
+						addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
+					}
+
+					if ((file != 0) && (sq + 7 == ep_square))
+					{
+						addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
+					}
+					if ((file != 7) && (sq + 9 == ep_square))
+					{
+						addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+					}
 				}
 			}
+			/************ WHITE BISHOPS ***********/
+			if (piece_type == wB)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = bishopDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/************ WHITE ROOKS ***********/
+			if (piece_type == wR)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = rookDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/************* WHITE KNIGHTS ************************/
+			if (piece_type == wN)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					int t_sq;
+					
+					if (rank < 6 && file < 7)
+					{
+						t_sq = sq + 17;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank < 7 && file < 6)
+					{
+						t_sq = sq + 10;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank > 1 && file < 7)
+					{
+						t_sq = sq - 15;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank > 1 && file < 6)
+					{
+						t_sq = sq - 6;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank < 6 && file > 0)
+					{
+						t_sq = sq + 15;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank < 7 && file > 1)
+					{
+						t_sq = sq + 6;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank > 1 && file > 0)
+					{
+						t_sq = sq - 17;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+					if (rank > 1 && file > 1)
+					{
+						t_sq = sq - 10;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+					}
+				}
+			}
+			/********************** WHITE QUEENS **************************/
+			if (piece_type == wQ)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = rookDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = bishopDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/**************************** WHITE KING *********************/
+			if (piece_type == wK)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
 
-			t_bb = (1ULL << (sq + 7));
-			if ((file != 0) && ((getBPieces() & t_bb) == t_bb))
-			{
-				addWPawnCapMove(sq, (sq+7), getPieceType(sq+7));
-			}
-			
-			t_bb = (1ULL << (sq + 9));
-			if ((file != 7) && ((getBPieces() & t_bb) == t_bb))
-			{
-				addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
-			}
-
-			if ((file != 0) && (sq + 7 == ep_square))
-			{
-				addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
-			}
-			if ((file != 7) && (sq + 9 == ep_square))
-			{
-				addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+					if (rank < 7)
+					{
+						t_piece = getPieceType(sq + 8);
+						addCapOrQuiet(t_piece, sq, sq + 8, WHITE);
+					}
+					if (rank < 7 && file < 7)
+					{
+						t_piece = getPieceType(sq + 9);
+						addCapOrQuiet(t_piece, sq, sq + 9, WHITE);
+					}
+					if (rank < 7 && file > 0)
+					{
+						t_piece = getPieceType(sq + 7);
+						addCapOrQuiet(t_piece, sq, sq + 7, WHITE);
+					}
+					if (rank > 0)
+					{
+						t_piece = getPieceType(sq - 8);
+						addCapOrQuiet(t_piece, sq, sq - 8, WHITE);
+					}
+					if (rank > 0 && file < 7)
+					{
+						t_piece = getPieceType(sq - 7);
+						addCapOrQuiet(t_piece, sq, sq - 7, WHITE);
+					}
+					if (rank > 0 && file > 0)
+					{
+						t_piece = getPieceType(sq - 9);
+						addCapOrQuiet(t_piece, sq, sq - 9, WHITE);
+					}
+					if (file > 0)
+					{
+						t_piece = getPieceType(sq + 1);
+						addCapOrQuiet(t_piece, sq, sq + 1, WHITE);
+					}
+					if (file < 7)
+					{
+						t_piece = getPieceType(sq - 1);
+						addCapOrQuiet(t_piece, sq, sq - 1, WHITE);
+					}
+				}
 			}
 		}
+		/********************** WHITE CASTLING *********************/
+			if (w_king_castle &&
+				getPieceType(F1) == NONE &&
+				getPieceType(G1) == NONE)
+			{
+				if (!isSqAttacked(E1, BLACK) &&
+					!isSqAttacked(F1, BLACK) &&
+					!isSqAttacked(G1, BLACK))
+				{
+					addQuietMove(M_MOVE(E1, G1, NONE, NONE, CAS_FLAG));
+				}
+			}
+			if (w_queen_castle &&
+				getPieceType(D1) == NONE &&
+				getPieceType(C1) == NONE &&
+				getPieceType(B1) == NONE)
+			{
+				if (!isSqAttacked(E1, BLACK) &&
+					!isSqAttacked(D1, BLACK) &&
+					!isSqAttacked(C1, BLACK))
+				{
+					addQuietMove(M_MOVE(E1, C1, NONE, NONE, CAS_FLAG));
+				}
+			}
 	}
 	else
 	{
-		// Black pawn
-		U64 piece_bb = getPieceBitboard(bP);
-		int piece_count = countBits(piece_bb);
-		U64 &ref_bb = piece_bb;
-
-		for (int i = 0; i < piece_count; i++)
+		U64 piece_bb;
+		int piece_count;
+		for (int piece_type = bP; piece_type <= bK; piece_type++)
 		{
-			sq = popFirstSetBit(ref_bb);
-			rank = sq / 8;
-			file = sq % 8;
-			
-			t_bb = (1ULL << (sq - 8));
-			if ((rank > 0) && ((getEmpty() & (t_bb)) == t_bb))
+			piece_bb = getPieceBitboard(piece_type);
+			int piece_count = countBits(piece_bb);
+			if (piece_count == 0)
 			{
-				addBPawnMove(sq, (sq - 8));
-				t_bb = (1ULL << (sq - 16));
-				if ((rank == 6) && ((getEmpty() & (t_bb)) == t_bb))
+				continue;
+			}
+			U64 &ref_bb = piece_bb;
+			/************************** BLACK PAWNS ***********************/
+			if (piece_type == bP)
+			{
+				for (int i = 0; i < piece_count; i++)
 				{
-					addQuietMove(M_MOVE(sq,(sq - 16),NONE,NONE,PS_FLAG));
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+
+					if ((rank < 7) && (getPieceType(sq + 8) == NONE))
+					{
+						addWPawnMove(sq, (sq + 8));
+						if ((rank == 1) && (getPieceType(sq + 16) == NONE))
+						{
+							addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+						}
+					}
+
+					t_piece = getPieceType(sq + 7);
+					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					{
+						addWPawnCapMove(sq, (sq+7), t_piece);
+					}
+					
+					t_piece = getPieceType(sq + 9);
+					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					{
+						addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
+					}
+
+					if ((file != 0) && (sq + 7 == ep_square))
+					{
+						addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
+					}
+					if ((file != 7) && (sq + 9 == ep_square))
+					{
+						addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+					}
 				}
 			}
+			/************************** BLACK BISHOPS **********************/
+			if (piece_type == bB)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = bishopDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/************************* BLACK ROOKS *****************************/
+			if (piece_type == bR)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = rookDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/**************************** BLACK KNIGHTS ************************/
+			if (piece_type == bN)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					int t_sq;
+					
+					if (rank < 6 && file < 7)
+					{
+						t_sq = sq + 17;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank < 7 && file < 6)
+					{
+						t_sq = sq + 10;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank > 1 && file < 7)
+					{
+						t_sq = sq - 15;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank > 1 && file < 6)
+					{
+						t_sq = sq - 6;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank < 6 && file > 0)
+					{
+						t_sq = sq + 15;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank < 7 && file > 1)
+					{
+						t_sq = sq + 6;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank > 1 && file > 0)
+					{
+						t_sq = sq - 17;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+					if (rank > 1 && file > 1)
+					{
+						t_sq = sq - 10;
+						t_piece = getPieceType(t_sq);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+					}
+				}
+			}
+			/************************** BLACK QUEENS **************************/
+			if (piece_type == bQ)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
+					
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = rookDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+					for (int j = 0; j < 4; j++)
+					{
+						int dir = bishopDirs[j];
+						for (int t_sq = sq + dir; t_sq < 64 && t_sq >= 0; t_sq += dir)
+						{
+							if ((t_sq % 8 == 0) && (((dir % 8 + 8) % 8) == 1))
+							{
+								break;
+							}
+							if ((t_sq % 8 == 7) && (((dir % 8 + 8) % 8) == 7))
+							{
+								break;
+							}
+							t_piece = getPieceType(t_sq);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							if (t_piece != NONE)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+			/**************************** BLACK KING ********************************/
+			if (piece_type == bK)
+			{
+				for (int i = 0; i < piece_count; i++)
+				{
+					sq = popFirstSetBit(ref_bb);
+					rank = sq / 8;
+					file = sq % 8;
 
-			t_bb = (1ULL << (sq - 9));
-			if ((file != 0) && ((getWPieces() & t_bb) == t_bb))
-			{
-				addBPawnCapMove(sq, (sq-9), getPieceType(sq-9));
+					if (rank < 7)
+					{
+						t_piece = getPieceType(sq + 8);
+						addCapOrQuiet(t_piece, sq, sq + 8, BLACK);
+					}
+					if (rank < 7 && file < 7)
+					{
+						t_piece = getPieceType(sq + 9);
+						addCapOrQuiet(t_piece, sq, sq + 9, BLACK);
+					}
+					if (rank < 7 && file > 0)
+					{
+						t_piece = getPieceType(sq + 7);
+						addCapOrQuiet(t_piece, sq, sq + 7, BLACK);
+					}
+					if (rank > 0)
+					{
+						t_piece = getPieceType(sq - 8);
+						addCapOrQuiet(t_piece, sq, sq - 8, BLACK);
+					}
+					if (rank > 0 && file < 7)
+					{
+						t_piece = getPieceType(sq - 7);
+						addCapOrQuiet(t_piece, sq, sq - 7, BLACK);
+					}
+					if (rank > 0 && file > 0)
+					{
+						t_piece = getPieceType(sq - 9);
+						addCapOrQuiet(t_piece, sq, sq - 9, BLACK);
+					}
+					if (file > 0)
+					{
+						t_piece = getPieceType(sq + 1);
+						addCapOrQuiet(t_piece, sq, sq + 1, BLACK);
+					}
+					if (file < 7)
+					{
+						t_piece = getPieceType(sq - 1);
+						addCapOrQuiet(t_piece, sq, sq - 1, BLACK);
+					}
+				}
 			}
-			
-			t_bb = (1ULL << (sq - 7));
-			if ((file != 7) && ((getWPieces() & t_bb) == t_bb))
+		}
+		/********************** BLACK CASTLING *********************/
+		if (b_king_castle &&
+			getPieceType(F8) == NONE &&
+			getPieceType(G8) == NONE)
+		{
+			if (!isSqAttacked(E8, WHITE) &&
+				!isSqAttacked(F8, WHITE) &&
+				!isSqAttacked(G8, WHITE))
 			{
-				addBPawnCapMove(sq, (sq-7), getPieceType(sq-7));
+				addQuietMove(M_MOVE(E8, G8, NONE, NONE, CAS_FLAG));
 			}
-
-			if ((file != 0) && (sq - 9 == ep_square))
+		}
+		if (b_queen_castle &&
+			getPieceType(D8) == NONE &&
+			getPieceType(C8) == NONE &&
+			getPieceType(B8) == NONE)
+		{
+			if (!isSqAttacked(E8, WHITE) &&
+				!isSqAttacked(D8, WHITE) &&
+				!isSqAttacked(C8, WHITE))
 			{
-				addCaptureMove(M_MOVE(sq, (sq-9), NONE, NONE, EP_FLAG));
-			}
-			if ((file != 7) && (sq - 7 == ep_square))
-			{
-				addCaptureMove(M_MOVE(sq, (sq-7), NONE, NONE, EP_FLAG));
+				addQuietMove(M_MOVE(E8, C8, NONE, NONE, CAS_FLAG));
 			}
 		}
 	}

@@ -51,6 +51,7 @@ class Board
 		void addQuietMove(int move);
 		void addCaptureMove(int move);
 		void addEnPassantMove(int move);
+		void addCapOrQuiet(int piece_type, int from, int to, bool side);
 		void generateAllMoves();
 		void addWPawnCapMove(const int from, const int to, const int cap);
 		void addWPawnMove(const int from, const int to);

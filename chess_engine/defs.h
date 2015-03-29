@@ -41,7 +41,6 @@ enum
 	bP, bN, bB, bR, bQ, bK
 };
 
-
 struct MOVE
 {
 	/* bits:
