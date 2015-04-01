@@ -26,13 +26,33 @@ int main()
 	Board b;
 
 	// read in the FEN for the starting position
-	b.parseFEN(FENTEST);
+	b.parseFEN(FEN0);
 	// print it to the screen
 	b.printBoard();
 	std::cout<< "\n\n";
 
 	b.generateAllMoves();
-	b.printMoveList();
+	int move_num = 0;
+	int move = 0;
+
+	for (move_num = 0; move_num < b.move_list->count; move_num++)
+	{
+		std::cout << "move_num = " << move_num << "\n";
+		move = b.move_list->moves[move_num].move;
+		if (!b.makeMove(move))
+		{
+			std::cout << "not legal\n";
+			continue;
+		}
+		std::cout << "made move: " << printMove(move) << "\n";
+		b.printBoard();
+		std::cout << "\n";
+
+		b.undoMove();
+		b.printBoard();
+		std::cout << "\n";
+		std::cin.ignore();
+	}
 	
 	std::cin.ignore();
 	return 0;

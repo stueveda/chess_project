@@ -27,12 +27,14 @@ class Board
 		int ep_square;
 
 		bool side_to_move;
-		int ply;
+		int game_ply;
 
 		MOVE_HISTORY history[MAXMOVES];
-		MOVE_LIST move_list[MAXPOSITIONMOVES];
+		
 
 	public:
+		MOVE_LIST move_list[MAXPOSITIONMOVES];
+
 		U64 getPieceBitboard(int piece_type);
 		void setPieceBitboard(int piece_type, U64 bb);
 		U64 getWPieces();
@@ -57,6 +59,11 @@ class Board
 		void addWPawnMove(const int from, const int to);
 		void addBPawnCapMove(const int from, const int to, const int cap);
 		void addBPawnMove(const int from, const int to);
+		void deletePiece(const int sq);
+		void addPiece(const int sq, const int piece_type);
+		void movePiece(const int from, const int to);
+		bool makeMove(int move);
+		void undoMove();
 		void printMoveList();
 
 		int parseFEN(char *fen);

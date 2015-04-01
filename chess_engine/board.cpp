@@ -420,7 +420,7 @@ void Board::setInitial()
 	b_king_castle = true;
 	b_queen_castle = true;
 	ep_square = -1;
-	ply = 1;
+	game_ply = 1;
 }
 
 // removes all pieces from the board,
@@ -449,7 +449,7 @@ void Board::clearBoard()
 	b_king_castle = true;
 	b_queen_castle = true;
 	ep_square = -1;
-	ply = 1;
+	game_ply = 1;
 }
 
 // prints the current board state to the screen
@@ -467,16 +467,12 @@ void Board::printBoard()
 			U64 board_square = 1ULL << square;
 
 			// if there's no piece on the square, print .
-			if ((board_square & (~getAllPieces())) == board_square)
+			if (getPieceType(square) == NONE)
 				std::cout << ". ";
 			// otherwise, print the piece using the lookup array
 			else
 			{
-				for (i = 0; i < 13; i++)
-				{
-					if ((board_square & getPieceBitboard(i)) == board_square)
-						break;
-				}
+				i = getPieceType(square);
 				std::cout << pieceLookup[i] << " ";
 			}
 		}
@@ -602,6 +598,10 @@ int Board::parseFEN(char *fen)
 		rank = fen[1] - '1';
 
 		ep_square = file + rank * 8;
+	}
+	else
+	{
+		ep_square = -1;
 	}
 	return 0;
 }
@@ -1384,5 +1384,207 @@ void Board::addBPawnMove(const int from, const int to)
 	else
 	{
 		addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+	}
+}
+
+void Board::deletePiece(const int sq)
+{
+	int piece = getPieceType(sq);
+	U64 bb = ((1ULL << sq) & getPieceBitboard(piece));
+	setPieceBitboard(piece, bb);
+}
+
+void Board::addPiece(const int sq, const int piece_type)
+{
+	U64 bb = (getPieceBitboard(piece_type) | (1ULL << sq));
+	setPieceBitboard(piece_type, bb);
+}
+
+void Board::movePiece(const int from, const int to)
+{
+	int piece_type = getPieceType(from);
+	U64 new_bb = getPieceBitboard(piece_type);
+	new_bb = new_bb & (~(1ULL << from));
+	new_bb = new_bb | (1ULL << to);
+	setPieceBitboard(piece_type, new_bb);
+}
+
+// returns false if illegal move - king is in check after move
+bool Board::makeMove(int move)
+{
+	int from = FROMSQ(move);
+	int to = TOSQ(move);
+
+	if (move & EP_FLAG)
+	{
+		if (side_to_move == WHITE)
+		{
+			deletePiece(to - 8); 
+		}
+		else
+		{
+			deletePiece(to + 8);
+		}
+	}
+	else if (move & CAS_FLAG)
+	{
+		switch(to)
+		{
+			case C1:
+				movePiece(A1, D1);
+			break;
+			case C8:
+				movePiece(A8, D8);
+			break;
+			case G1:
+				movePiece(H1, F1);
+			break;
+			case G8:
+				movePiece(H8, F8);
+			break;
+			default:
+				std::cout << "ERROR IN MAKEMOVE CASTLING\n";
+			break;
+		}
+	}
+
+	history[game_ply].move = move;
+	history[game_ply].w_king_castle = w_king_castle;
+	history[game_ply].w_queen_castle = w_queen_castle;
+	history[game_ply].b_king_castle = b_king_castle;
+	history[game_ply].b_queen_castle = b_queen_castle;
+	history[game_ply].ep_square = ep_square;
+
+	int captured = CAP_PIECE(move);
+	if (captured != NONE)
+	{
+		deletePiece(to);
+	}
+
+	game_ply++;
+	
+	// need to do a search_ply++
+
+	int moving_piece = getPieceType(from);
+	if (moving_piece == wP && (move & PS_FLAG))
+	{
+		ep_square = from + 8;
+	}
+	else if (moving_piece == bP && (move & PS_FLAG))
+	{
+		ep_square = from - 8;
+	}
+	else
+	{
+		ep_square = -1;
+	}
+
+	movePiece(from, to);
+
+	int promotion = PROM_PIECE(move);
+	if (promotion != NONE)
+	{
+		deletePiece(to);
+		addPiece(to, promotion);
+	}
+	
+
+	// check if the king is under attack as result of move
+	int i = 0;
+	for (i = 0; i < 64; i++)
+	{
+		if (side_to_move == WHITE)
+		{
+			if (1ULL << i == getPieceBitboard(wK))
+			{
+				break;
+			}
+		}
+		else
+		{
+			if (1ULL << i == getPieceBitboard(bK))
+			{
+				break;
+			}
+		}
+	}
+	
+	side_to_move ^= 1;
+
+	if (isSqAttacked(i, side_to_move))
+	{
+		undoMove();
+		return false;
+	};
+	return true;
+}
+
+void Board::undoMove()
+{
+	game_ply--;
+
+	int move = history[game_ply].move;
+	int from = FROMSQ(move);
+	int to = TOSQ(move);
+
+	ep_square = history[game_ply].ep_square;
+	w_king_castle = history[game_ply].w_king_castle;
+	w_queen_castle = history[game_ply].w_queen_castle;
+	b_king_castle = history[game_ply].b_king_castle;
+	b_queen_castle = history[game_ply].b_queen_castle;
+
+	side_to_move ^= 1;
+
+	if (move & EP_FLAG)
+	{
+		if (side_to_move == WHITE)
+		{
+			addPiece(to - 8, bP);
+		}
+		else
+		{
+			addPiece(to + 8, wP);
+		}
+	}
+	if (move & CAS_FLAG)
+	{
+		switch(to)
+		{
+			case C1:
+				movePiece(D1, A1);
+				break;
+			case C8:
+				movePiece(D8, A8);
+				break;
+			case G1:
+				movePiece(F1, H1);
+				break;
+			case G8:
+				movePiece(F8, H8);
+				break;
+			default:
+				break;
+		}
+	}
+
+	movePiece(to, from);
+
+	int captured = CAP_PIECE(move);
+	if (captured != NONE)
+	{
+		addPiece(to, captured);
+	}
+
+	if (PROM_PIECE(move) != NONE)
+	{
+		deletePiece(from);
+		if (side_to_move == WHITE)
+		{
+			addPiece(from, wP);
+		}
+		else
+		{
+			addPiece(from, bP);
+		}
 	}
 }
