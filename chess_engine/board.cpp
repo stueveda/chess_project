@@ -86,11 +86,12 @@ bool Board::isSqAttacked(const int sq, const bool side)
 	if (side == WHITE)
 	{
 		/**************** PAWN ATTACKS *******************/
-		if (sq + 9 >= 0 && file > 0 && (getPieceType(sq - 9) == wP))
+		if (sq - 9 >= 0 && file > 0 && (getPieceType(sq - 9) == wP))
 		{
+
 			return true;
 		}
-		if (sq + 7 >= 0 && file < 7 && (getPieceType(sq - 7) == wP))
+		if (sq - 7 >= 0 && file < 7 && (getPieceType(sq - 7) == wP))
 		{
 			return true;
 		}
@@ -112,7 +113,7 @@ bool Board::isSqAttacked(const int sq, const bool side)
 			return true;
 		}
 		// down 1 right 2 => -6
-		if (rank > 1 && file < 6 && (getPieceType(sq - 6) == wN))
+		if (rank > 0 && file < 6 && (getPieceType(sq - 6) == wN))
 		{
 			return true;
 		}
@@ -132,7 +133,7 @@ bool Board::isSqAttacked(const int sq, const bool side)
 			return true;
 		}
 		// down 1 left 2 => -10
-		if (rank > 1 && file > 1 && (getPieceType(sq - 10) == wN))
+		if (rank > 0 && file > 1 && (getPieceType(sq - 10) == wN))
 		{
 			return true;
 		}
@@ -222,11 +223,11 @@ bool Board::isSqAttacked(const int sq, const bool side)
 		{
 			return true;
 		}
-		if (file > 0 && (getPieceType(sq + 1) == wK))
+		if (file > 0 && (getPieceType(sq - 1) == wK))
 		{
 			return true;
 		}
-		if (file < 7 && (getPieceType(sq - 1) == wK))
+		if (file < 7 && (getPieceType(sq + 1) == wK))
 		{
 			return true;
 		}
@@ -263,7 +264,7 @@ bool Board::isSqAttacked(const int sq, const bool side)
 			return true;
 		}
 		// down 1 right 2 => -6
-		if (rank > 1 && file < 6 && (getPieceType(sq - 6) == bN))
+		if (rank > 0 && file < 6 && (getPieceType(sq - 6) == bN))
 		{
 			return true;
 		}
@@ -283,7 +284,7 @@ bool Board::isSqAttacked(const int sq, const bool side)
 			return true;
 		}
 		// down 1 left 2 => -10
-		if (rank > 1 && file > 1 && (getPieceType(sq - 10) == bN))
+		if (rank > 0 && file > 1 && (getPieceType(sq - 10) == bN))
 		{
 			return true;
 		}
@@ -373,11 +374,11 @@ bool Board::isSqAttacked(const int sq, const bool side)
 		{
 			return true;
 		}
-		if (file > 0 && (getPieceType(sq + 1) == bK))
+		if (file > 0 && (getPieceType(sq - 1) == bK))
 		{
 			return true;
 		}
-		if (file < 7 && (getPieceType(sq - 1) == bK))
+		if (file < 7 && (getPieceType(sq + 1) == bK))
 		{
 			return true;
 		}
@@ -502,9 +503,13 @@ void Board::printBoard()
 }
 
 // sets the board state to a specified FEN format string
-int Board::parseFEN(char *fen)
+int Board::parseFEN(const char *fen)
 {
 	clearBoard();
+	w_king_castle = false;
+	w_queen_castle = false;
+	b_king_castle = false;
+	b_queen_castle = false;
 
 	int rank = 7;
 	int file = 0;
@@ -635,56 +640,56 @@ void Board::printAttacked(const bool side)
 }
 
 /************** MOVE GENERATION ***************/
-void Board::addQuietMove(int move)
+void Board::addQuietMove(int move, MOVE_LIST *list)
 {
-	move_list->moves[move_list->count].move = move;
-	move_list->moves[move_list->count].value = 0;
-	move_list->count++;
+	list->moves[list->count].move = move;
+	list->moves[list->count].value = 0;
+	list->count++;
 }
 
-void Board::addCaptureMove(int move)
+void Board::addCaptureMove(int move, MOVE_LIST *list)
 {
-	move_list->moves[move_list->count].move = move;
-	move_list->moves[move_list->count].value = 0;
-	move_list->count++;
+	list->moves[list->count].move = move;
+	list->moves[list->count].value = 0;
+	list->count++;
 }
 
-void Board::addEnPassantMove(int move)
+void Board::addEnPassantMove(int move, MOVE_LIST *list)
 {
-	move_list->moves[move_list->count].move = move;
-	move_list->moves[move_list->count].value = 0;
-	move_list->count++;
+	list->moves[list->count].move = move;
+	list->moves[list->count].value = 0;
+	list->count++;
 }
 
-void Board::addCapOrQuiet(int piece_type, int from, int to, bool side)
+void Board::addCapOrQuiet(int piece_type, int from, int to, bool side, MOVE_LIST *list)
 {
 	if (side == WHITE)
 	{
 		if (piece_type == NONE)
 		{
-			addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+			addQuietMove(M_MOVE(from, to, NONE, NONE, 0), list);
 		}
 		else if (piece_type >= bP && piece_type <= bK)
 		{
-			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0));
+			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0), list);
 		}
 	}
 	else
 	{
 		if (piece_type == NONE)
 		{
-			addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+			addQuietMove(M_MOVE(from, to, NONE, NONE, 0), list);
 		}
 		else if (piece_type >= wP && piece_type <= wK)
 		{
-			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0));
+			addCaptureMove(M_MOVE(from, to, piece_type, NONE, 0), list);
 		}
 	}
 }
 
-void Board::generateAllMoves()
+void Board::generateAllMoves(MOVE_LIST *list)
 {
-	move_list->count = 0;
+	list->count = 0;
 
 	int sq;
 	int rank;
@@ -717,32 +722,32 @@ void Board::generateAllMoves()
 
 					if ((rank < 7) && (getPieceType(sq + 8) == NONE))
 					{
-						addWPawnMove(sq, (sq + 8));
+						addWPawnMove(sq, (sq + 8), list);
 						if ((rank == 1) && (getPieceType(sq + 16) == NONE))
 						{
-							addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+							addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG), list);
 						}
 					}
 
 					t_piece = getPieceType(sq + 7);
-					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					if (file > 0 && t_piece >= bP && t_piece <= bK)
 					{
-						addWPawnCapMove(sq, (sq+7), t_piece);
+						addWPawnCapMove(sq, (sq+7), t_piece, list);
 					}
 					
 					t_piece = getPieceType(sq + 9);
-					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					if (file < 7 && t_piece >= bP && t_piece <= bK)
 					{
-						addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
+						addWPawnCapMove(sq, (sq+9), t_piece, list);
 					}
 
-					if ((file != 0) && (sq + 7 == ep_square))
+					if ((file > 0) && (sq + 7 == ep_square))
 					{
-						addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
+						addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG), list);
 					}
-					if ((file != 7) && (sq + 9 == ep_square))
+					if ((file < 7) && (sq + 9 == ep_square))
 					{
-						addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+						addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG), list);
 					}
 				}
 			}
@@ -769,7 +774,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -801,7 +806,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -824,49 +829,49 @@ void Board::generateAllMoves()
 					{
 						t_sq = sq + 17;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 					if (rank < 7 && file < 6)
 					{
 						t_sq = sq + 10;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 					if (rank > 1 && file < 7)
 					{
 						t_sq = sq - 15;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
-					if (rank > 1 && file < 6)
+					if (rank > 0 && file < 6)
 					{
 						t_sq = sq - 6;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 					if (rank < 6 && file > 0)
 					{
 						t_sq = sq + 15;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 					if (rank < 7 && file > 1)
 					{
 						t_sq = sq + 6;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 					if (rank > 1 && file > 0)
 					{
 						t_sq = sq - 17;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
-					if (rank > 1 && file > 1)
+					if (rank > 0 && file > 1)
 					{
 						t_sq = sq - 10;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+						addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 					}
 				}
 			}
@@ -893,7 +898,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -914,7 +919,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, WHITE);
+							addCapOrQuiet(t_piece, sq, t_sq, WHITE, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -935,42 +940,42 @@ void Board::generateAllMoves()
 					if (rank < 7)
 					{
 						t_piece = getPieceType(sq + 8);
-						addCapOrQuiet(t_piece, sq, sq + 8, WHITE);
+						addCapOrQuiet(t_piece, sq, sq + 8, WHITE, list);
 					}
 					if (rank < 7 && file < 7)
 					{
 						t_piece = getPieceType(sq + 9);
-						addCapOrQuiet(t_piece, sq, sq + 9, WHITE);
+						addCapOrQuiet(t_piece, sq, sq + 9, WHITE, list);
 					}
 					if (rank < 7 && file > 0)
 					{
 						t_piece = getPieceType(sq + 7);
-						addCapOrQuiet(t_piece, sq, sq + 7, WHITE);
+						addCapOrQuiet(t_piece, sq, sq + 7, WHITE, list);
 					}
 					if (rank > 0)
 					{
 						t_piece = getPieceType(sq - 8);
-						addCapOrQuiet(t_piece, sq, sq - 8, WHITE);
+						addCapOrQuiet(t_piece, sq, sq - 8, WHITE, list);
 					}
 					if (rank > 0 && file < 7)
 					{
 						t_piece = getPieceType(sq - 7);
-						addCapOrQuiet(t_piece, sq, sq - 7, WHITE);
+						addCapOrQuiet(t_piece, sq, sq - 7, WHITE, list);
 					}
 					if (rank > 0 && file > 0)
 					{
 						t_piece = getPieceType(sq - 9);
-						addCapOrQuiet(t_piece, sq, sq - 9, WHITE);
+						addCapOrQuiet(t_piece, sq, sq - 9, WHITE, list);
 					}
 					if (file > 0)
 					{
-						t_piece = getPieceType(sq + 1);
-						addCapOrQuiet(t_piece, sq, sq + 1, WHITE);
+						t_piece = getPieceType(sq - 1);
+						addCapOrQuiet(t_piece, sq, sq - 1, WHITE, list);
 					}
 					if (file < 7)
 					{
-						t_piece = getPieceType(sq - 1);
-						addCapOrQuiet(t_piece, sq, sq - 1, WHITE);
+						t_piece = getPieceType(sq + 1);
+						addCapOrQuiet(t_piece, sq, sq + 1, WHITE, list);
 					}
 				}
 			}
@@ -984,7 +989,7 @@ void Board::generateAllMoves()
 					!isSqAttacked(F1, BLACK) &&
 					!isSqAttacked(G1, BLACK))
 				{
-					addQuietMove(M_MOVE(E1, G1, NONE, NONE, CAS_FLAG));
+					addQuietMove(M_MOVE(E1, G1, NONE, NONE, CAS_FLAG), list);
 				}
 			}
 			if (w_queen_castle &&
@@ -996,7 +1001,7 @@ void Board::generateAllMoves()
 					!isSqAttacked(D1, BLACK) &&
 					!isSqAttacked(C1, BLACK))
 				{
-					addQuietMove(M_MOVE(E1, C1, NONE, NONE, CAS_FLAG));
+					addQuietMove(M_MOVE(E1, C1, NONE, NONE, CAS_FLAG), list);
 				}
 			}
 	}
@@ -1022,34 +1027,34 @@ void Board::generateAllMoves()
 					rank = sq / 8;
 					file = sq % 8;
 
-					if ((rank < 7) && (getPieceType(sq + 8) == NONE))
+					if ((rank > 0) && (getPieceType(sq - 8) == NONE))
 					{
-						addWPawnMove(sq, (sq + 8));
-						if ((rank == 1) && (getPieceType(sq + 16) == NONE))
+						addBPawnMove(sq, (sq - 8), list);
+						if ((rank == 6) && (getPieceType(sq - 16) == NONE))
 						{
-							addQuietMove(M_MOVE(sq,(sq + 16),NONE,NONE,PS_FLAG));
+							addQuietMove(M_MOVE(sq,(sq - 16),NONE,NONE,PS_FLAG), list);
 						}
 					}
 
-					t_piece = getPieceType(sq + 7);
-					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					t_piece = getPieceType(sq - 9);
+					if (file > 0 && t_piece >= wP && t_piece <= wK)
 					{
-						addWPawnCapMove(sq, (sq+7), t_piece);
+						addBPawnCapMove(sq, (sq - 9), t_piece, list);
 					}
 					
-					t_piece = getPieceType(sq + 9);
-					if (file != 0 && t_piece >= bP && t_piece <= bK)
+					t_piece = getPieceType(sq - 7);
+					if (file < 7 && t_piece >= wP && t_piece <= wK)
 					{
-						addWPawnCapMove(sq, (sq+9), getPieceType(sq+9));
+						addBPawnCapMove(sq, (sq - 7), t_piece, list);
 					}
 
-					if ((file != 0) && (sq + 7 == ep_square))
+					if ((file > 0) && (sq - 9 == ep_square))
 					{
-						addCaptureMove(M_MOVE(sq, (sq+7), NONE, NONE, EP_FLAG));
+						addCaptureMove(M_MOVE(sq, (sq- 9), NONE, NONE, EP_FLAG), list);
 					}
-					if ((file != 7) && (sq + 9 == ep_square))
+					if ((file < 7) && (sq - 7 == ep_square))
 					{
-						addCaptureMove(M_MOVE(sq, (sq+9), NONE, NONE, EP_FLAG));
+						addCaptureMove(M_MOVE(sq, (sq - 7), NONE, NONE, EP_FLAG), list);
 					}
 				}
 			}
@@ -1076,7 +1081,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -1108,7 +1113,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -1131,49 +1136,49 @@ void Board::generateAllMoves()
 					{
 						t_sq = sq + 17;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 					if (rank < 7 && file < 6)
 					{
 						t_sq = sq + 10;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 					if (rank > 1 && file < 7)
 					{
 						t_sq = sq - 15;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
-					if (rank > 1 && file < 6)
+					if (rank > 0 && file < 6)
 					{
 						t_sq = sq - 6;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 					if (rank < 6 && file > 0)
 					{
 						t_sq = sq + 15;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 					if (rank < 7 && file > 1)
 					{
 						t_sq = sq + 6;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 					if (rank > 1 && file > 0)
 					{
 						t_sq = sq - 17;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
-					if (rank > 1 && file > 1)
+					if (rank > 0 && file > 1)
 					{
 						t_sq = sq - 10;
 						t_piece = getPieceType(t_sq);
-						addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+						addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 					}
 				}
 			}
@@ -1200,7 +1205,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -1221,7 +1226,7 @@ void Board::generateAllMoves()
 								break;
 							}
 							t_piece = getPieceType(t_sq);
-							addCapOrQuiet(t_piece, sq, t_sq, BLACK);
+							addCapOrQuiet(t_piece, sq, t_sq, BLACK, list);
 							if (t_piece != NONE)
 							{
 								break;
@@ -1242,42 +1247,42 @@ void Board::generateAllMoves()
 					if (rank < 7)
 					{
 						t_piece = getPieceType(sq + 8);
-						addCapOrQuiet(t_piece, sq, sq + 8, BLACK);
+						addCapOrQuiet(t_piece, sq, sq + 8, BLACK, list);
 					}
 					if (rank < 7 && file < 7)
 					{
 						t_piece = getPieceType(sq + 9);
-						addCapOrQuiet(t_piece, sq, sq + 9, BLACK);
+						addCapOrQuiet(t_piece, sq, sq + 9, BLACK, list);
 					}
 					if (rank < 7 && file > 0)
 					{
 						t_piece = getPieceType(sq + 7);
-						addCapOrQuiet(t_piece, sq, sq + 7, BLACK);
+						addCapOrQuiet(t_piece, sq, sq + 7, BLACK, list);
 					}
 					if (rank > 0)
 					{
 						t_piece = getPieceType(sq - 8);
-						addCapOrQuiet(t_piece, sq, sq - 8, BLACK);
+						addCapOrQuiet(t_piece, sq, sq - 8, BLACK, list);
 					}
 					if (rank > 0 && file < 7)
 					{
 						t_piece = getPieceType(sq - 7);
-						addCapOrQuiet(t_piece, sq, sq - 7, BLACK);
+						addCapOrQuiet(t_piece, sq, sq - 7, BLACK, list);
 					}
 					if (rank > 0 && file > 0)
 					{
 						t_piece = getPieceType(sq - 9);
-						addCapOrQuiet(t_piece, sq, sq - 9, BLACK);
+						addCapOrQuiet(t_piece, sq, sq - 9, BLACK, list);
 					}
 					if (file > 0)
 					{
-						t_piece = getPieceType(sq + 1);
-						addCapOrQuiet(t_piece, sq, sq + 1, BLACK);
+						t_piece = getPieceType(sq - 1);
+						addCapOrQuiet(t_piece, sq, sq - 1, BLACK, list);
 					}
 					if (file < 7)
 					{
-						t_piece = getPieceType(sq - 1);
-						addCapOrQuiet(t_piece, sq, sq - 1, BLACK);
+						t_piece = getPieceType(sq + 1);
+						addCapOrQuiet(t_piece, sq, sq + 1, BLACK, list);
 					}
 				}
 			}
@@ -1291,7 +1296,7 @@ void Board::generateAllMoves()
 				!isSqAttacked(F8, WHITE) &&
 				!isSqAttacked(G8, WHITE))
 			{
-				addQuietMove(M_MOVE(E8, G8, NONE, NONE, CAS_FLAG));
+				addQuietMove(M_MOVE(E8, G8, NONE, NONE, CAS_FLAG), list);
 			}
 		}
 		if (b_queen_castle &&
@@ -1303,23 +1308,23 @@ void Board::generateAllMoves()
 				!isSqAttacked(D8, WHITE) &&
 				!isSqAttacked(C8, WHITE))
 			{
-				addQuietMove(M_MOVE(E8, C8, NONE, NONE, CAS_FLAG));
+				addQuietMove(M_MOVE(E8, C8, NONE, NONE, CAS_FLAG), list);
 			}
 		}
 	}
 }
 
-void Board::printMoveList()
+void Board::printMoveList(MOVE_LIST *list)
 {
 	int index = 0;
 	int value = 0;
 	int move = 0;
-	std::cout << "Move list: " << move_list->count << " moves.\n";
+	std::cout << "Move list: " << list->count << " moves.\n";
 
-	for (index = 0; index < move_list->count; index++)
+	for (index = 0; index < list->count; index++)
 	{
-		move = move_list->moves[index].move;
-		value = move_list->moves[index].value;
+		move = list->moves[index].move;
+		value = list->moves[index].value;
 
 		std::cout << "move: ";
 		printMove(move);
@@ -1327,70 +1332,70 @@ void Board::printMoveList()
 	}
 }
 
-void Board::addWPawnCapMove(const int from, const int to, const int cap)
+void Board::addWPawnCapMove(const int from, const int to, const int cap, MOVE_LIST *list)
 {
 	if (from / 8 == 6)
 	{
-		addCaptureMove(M_MOVE(from, to, cap, wQ, 0));
-		addCaptureMove(M_MOVE(from, to, cap, wR, 0));
-		addCaptureMove(M_MOVE(from, to, cap, wB, 0));
-		addCaptureMove(M_MOVE(from, to, cap, wN, 0));
+		addCaptureMove(M_MOVE(from, to, cap, wQ, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, wR, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, wB, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, wN, 0), list);
 	}
 	else
 	{
-		addCaptureMove(M_MOVE(from, to, NONE, NONE, 0));
+		addCaptureMove(M_MOVE(from, to, cap, NONE, 0), list);
 	}
 }
 
-void Board::addWPawnMove(const int from, const int to)
+void Board::addWPawnMove(const int from, const int to, MOVE_LIST *list)
 {
 	if (from / 8 == 6)
 	{
-		addQuietMove(M_MOVE(from, to, NONE, wQ, 0));
-		addQuietMove(M_MOVE(from, to, NONE, wR, 0));
-		addQuietMove(M_MOVE(from, to, NONE, wB, 0));
-		addQuietMove(M_MOVE(from, to, NONE, wN, 0));
+		addQuietMove(M_MOVE(from, to, NONE, wQ, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, wR, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, wB, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, wN, 0), list);
 	}
 	else
 	{
-		addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+		addQuietMove(M_MOVE(from, to, NONE, NONE, 0), list);
 	}
 }
 
-void Board::addBPawnCapMove(const int from, const int to, const int cap)
+void Board::addBPawnCapMove(const int from, const int to, const int cap, MOVE_LIST *list)
 {
 	if (from / 8 == 1)
 	{
-		addCaptureMove(M_MOVE(from, to, cap, bQ, 0));
-		addCaptureMove(M_MOVE(from, to, cap, bR, 0));
-		addCaptureMove(M_MOVE(from, to, cap, bB, 0));
-		addCaptureMove(M_MOVE(from, to, cap, bN, 0));
+		addCaptureMove(M_MOVE(from, to, cap, bQ, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, bR, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, bB, 0), list);
+		addCaptureMove(M_MOVE(from, to, cap, bN, 0), list);
 	}
 	else
 	{
-		addCaptureMove(M_MOVE(from, to, NONE, NONE, 0));
+		addCaptureMove(M_MOVE(from, to, cap, NONE, 0), list);
 	}
 }
 
-void Board::addBPawnMove(const int from, const int to)
+void Board::addBPawnMove(const int from, const int to, MOVE_LIST *list)
 {
 	if (from / 8 == 1)
 	{
-		addQuietMove(M_MOVE(from, to, NONE, bQ, 0));
-		addQuietMove(M_MOVE(from, to, NONE, bR, 0));
-		addQuietMove(M_MOVE(from, to, NONE, bB, 0));
-		addQuietMove(M_MOVE(from, to, NONE, bN, 0));
+		addQuietMove(M_MOVE(from, to, NONE, bQ, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, bR, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, bB, 0), list);
+		addQuietMove(M_MOVE(from, to, NONE, bN, 0), list);
 	}
 	else
 	{
-		addQuietMove(M_MOVE(from, to, NONE, NONE, 0));
+		addQuietMove(M_MOVE(from, to, NONE, NONE, 0), list);
 	}
 }
 
 void Board::deletePiece(const int sq)
 {
 	int piece = getPieceType(sq);
-	U64 bb = ((1ULL << sq) & getPieceBitboard(piece));
+	U64 bb = (~(1ULL << sq) & getPieceBitboard(piece));
 	setPieceBitboard(piece, bb);
 }
 
@@ -1455,6 +1460,23 @@ bool Board::makeMove(int move)
 	history[game_ply].b_queen_castle = b_queen_castle;
 	history[game_ply].ep_square = ep_square;
 
+	if (from == A1 || to == A1 || from == E1)
+	{
+		w_queen_castle = false;
+	}
+	if (from == H1 || to == H1 || from == E1)
+	{
+		w_king_castle = false;
+	}
+	if (from == A8 || to == A8 || from == E8)
+	{
+		b_queen_castle = false;
+	}
+	if (from == H8 || to == H8 || from == E8)
+	{
+		b_king_castle = false;
+	}
+
 	int captured = CAP_PIECE(move);
 	if (captured != NONE)
 	{
@@ -1489,7 +1511,7 @@ bool Board::makeMove(int move)
 	}
 	
 
-	// check if the king is under attack as result of move
+	// get the king's square
 	int i = 0;
 	for (i = 0; i < 64; i++)
 	{
@@ -1587,4 +1609,62 @@ void Board::undoMove()
 			addPiece(from, bP);
 		}
 	}
+}
+
+long Board::perft(int depth)
+{
+	long val = 0;
+	if (depth == 0)
+	{
+		return 1;
+	}
+
+	MOVE_LIST move_list[1];
+	generateAllMoves(move_list);
+	if (move_list->count == 0)
+	{
+		std::cout << "checkmate\n";
+	}
+
+
+	for (int i = 0; i < move_list->count; i++)
+	{
+		if (!makeMove(move_list->moves[i].move))
+		{
+			continue;
+		}
+		val += perft(depth - 1);
+		undoMove();
+	}
+	return val;
+}
+
+long Board::perftTest(int depth)
+{
+	std::cout << "starting perft to depth: " << depth << "\n";
+	long val = 0;
+	long a;
+	if (depth == 0)
+	{
+		return 1;
+	}
+
+	MOVE_LIST move_list[1];
+	generateAllMoves(move_list);
+	std::cout << "\n";
+	for (int i = 0; i < move_list->count; i++)
+	{
+		if (!makeMove(move_list->moves[i].move))
+		{
+			continue;
+		}
+		a = perft(depth - 1);
+		undoMove();
+		val += a;
+		std::cout << "move " << i << ": ";
+		printMove(move_list->moves[i].move);
+		std::cout << ": " << a << "\n";
+	}
+
+	return val;
 }

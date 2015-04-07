@@ -33,7 +33,6 @@ class Board
 		
 
 	public:
-		MOVE_LIST move_list[MAXPOSITIONMOVES];
 
 		U64 getPieceBitboard(int piece_type);
 		void setPieceBitboard(int piece_type, U64 bb);
@@ -50,23 +49,26 @@ class Board
 		void printAttacked(const bool side);
 
 		// move generator functions
-		void addQuietMove(int move);
-		void addCaptureMove(int move);
-		void addEnPassantMove(int move);
-		void addCapOrQuiet(int piece_type, int from, int to, bool side);
-		void generateAllMoves();
-		void addWPawnCapMove(const int from, const int to, const int cap);
-		void addWPawnMove(const int from, const int to);
-		void addBPawnCapMove(const int from, const int to, const int cap);
-		void addBPawnMove(const int from, const int to);
+		void addQuietMove(int move, MOVE_LIST *list);
+		void addCaptureMove(int move, MOVE_LIST *list);
+		void addEnPassantMove(int move, MOVE_LIST *list);
+		void addCapOrQuiet(int piece_type, int from, int to, bool side, MOVE_LIST *list);
+		void generateAllMoves(MOVE_LIST *list);
+		void addWPawnCapMove(const int from, const int to, const int cap, MOVE_LIST *list);
+		void addWPawnMove(const int from, const int to, MOVE_LIST *list);
+		void addBPawnCapMove(const int from, const int to, const int cap, MOVE_LIST *list);
+		void addBPawnMove(const int from, const int to, MOVE_LIST *list);
 		void deletePiece(const int sq);
 		void addPiece(const int sq, const int piece_type);
 		void movePiece(const int from, const int to);
 		bool makeMove(int move);
 		void undoMove();
-		void printMoveList();
+		void printMoveList(MOVE_LIST *list);
 
-		int parseFEN(char *fen);
+		long perft(int depth);
+		long perftTest(int depth);
+
+		int parseFEN(const char *fen);
 };
 
 #endif
