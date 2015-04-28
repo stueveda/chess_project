@@ -27,6 +27,11 @@ void Board::setPieceBitboard(int piece_type, U64 bb)
 	bitboardArray[piece_type] = bb;
 }
 
+bool Board::getSide()
+{
+	return side_to_move;
+}
+
 // returns the bitboard indicating the position of all white pieces
 U64 Board::getWPieces()
 {
@@ -422,6 +427,7 @@ void Board::setInitial()
 	b_queen_castle = true;
 	ep_square = -1;
 	game_ply = 1;
+	side_to_move = WHITE;
 }
 
 // removes all pieces from the board,
@@ -451,6 +457,7 @@ void Board::clearBoard()
 	b_queen_castle = true;
 	ep_square = -1;
 	game_ply = 1;
+	side_to_move = WHITE;
 }
 
 // prints the current board state to the screen
@@ -481,9 +488,13 @@ void Board::printBoard()
 	}
 	std::cout << "\n";
 	if (side_to_move == WHITE)
+	{
 		std::cout << "White";
+	}
 	else
+	{
 		std::cout << "Black";
+	}
 	std::cout << "'s turn\n";
 	std::cout << "White castle: ";
 	if (w_king_castle)
@@ -500,6 +511,180 @@ void Board::printBoard()
 	if (ep_square != -1)
 		std::cout << "en passant square: " << ep_square;
 
+}
+
+std::string Board::getFEN()
+{
+	int rank = 7;
+	int file = 0;
+	int count = 0;
+	int piece;
+	std::string fen = "";
+	while (rank >= 0)
+	{
+		while (file <= 7)
+		{
+			piece = getPieceType(rank * 8 + file);
+			switch (piece)
+			{
+				case NONE:
+					count++;
+					break;
+				case wP:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('P');
+					count = 0;
+					break;
+				case wN:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('N');
+					count = 0;
+					break;
+				case wB:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('B');
+					count = 0;
+					break;
+				case wR:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('R');
+					count = 0;
+					break;
+				case wQ:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('Q');
+					count = 0;
+					break;
+				case wK:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('K');
+					count = 0;
+					break;
+				case bP:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('p');
+					count = 0;
+					break;
+				case bN:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('n');
+					count = 0;
+					break;
+				case bB:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('b');
+					count = 0;
+					break;
+				case bR:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('r');
+					count = 0;
+					break;
+				case bQ:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('q');
+					count = 0;
+					break;
+				case bK:
+					if (count > 0)
+					{
+						fen.push_back('0' + count);
+					}
+					fen.push_back('k');
+					count = 0;
+					break;
+			}
+			file++;
+		}
+		if (count > 0)
+		{
+			fen.push_back('0' + count);
+			count = 0;
+		}
+		fen.push_back('/');
+		file = 0;
+		rank--;
+	}
+
+	fen.push_back(' ');
+	if (side_to_move == WHITE)
+	{
+		fen.push_back('w');
+	}
+	else
+	{
+		fen.push_back('b');
+	}
+	fen.push_back(' ');
+
+	if (w_king_castle)
+	{
+		fen.push_back('K');
+	}
+	if (w_queen_castle)
+	{
+		fen.push_back('Q');
+	}
+	if (b_king_castle)
+	{
+		fen.push_back('k');
+	}
+	if (b_queen_castle)
+	{
+		fen.push_back('q');
+	}
+
+	fen.push_back(' ');
+	// read in en passant square
+	if (ep_square == -1)
+	{
+		fen.push_back('-');
+	}
+	else
+	{
+		char ep_file = ep_square % 8;
+		char ep_rank = ep_square / 8;
+		fen.push_back('h' - ep_file);
+		fen.push_back('8' - ep_rank);
+	}
+	fen.push_back(' ');
+	fen.push_back('0');
+	fen.push_back(' ');
+	fen.push_back('0');
+	return fen;
 }
 
 // sets the board state to a specified FEN format string
@@ -1543,6 +1728,10 @@ bool Board::makeMove(int move)
 
 void Board::undoMove()
 {
+	if (game_ply <= 1)
+	{
+		return;
+	}
 	game_ply--;
 
 	int move = history[game_ply].move;
@@ -1609,6 +1798,32 @@ void Board::undoMove()
 			addPiece(from, bP);
 		}
 	}
+}
+
+int Board::parseMove(char *c_ptr)
+{
+	if (c_ptr[0] > 'h' || c_ptr[0] < 'a')
+	{
+		return 0;
+	}
+	if (c_ptr[1] > '8' || c_ptr[1] < '1')
+	{
+		return 0;
+	}
+	if (c_ptr[2] > 'h' || c_ptr[2] < 'a')
+	{
+		return 0;
+	}
+	if (c_ptr[3] > '8' || c_ptr[3] < '1')
+	{
+		return 0;
+	}
+	
+	int from = (c_ptr[0] - 'a') + (8 * (c_ptr[1] - '1'));
+	int to = (c_ptr[2] - 'a') + (8 * (c_ptr[3] - '1'));
+
+	// implement later
+	return 0;
 }
 
 long Board::perft(int depth)

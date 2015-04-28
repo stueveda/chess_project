@@ -34,6 +34,7 @@ class Board
 
 	public:
 
+		bool getSide();
 		U64 getPieceBitboard(int piece_type);
 		void setPieceBitboard(int piece_type, U64 bb);
 		U64 getWPieces();
@@ -65,9 +66,12 @@ class Board
 		void undoMove();
 		void printMoveList(MOVE_LIST *list);
 
+		int parseMove(char *c_ptr);
+
 		long perft(int depth);
 		long perftTest(int depth);
 
+		std::string getFEN();
 		int parseFEN(const char *fen);
 };
 

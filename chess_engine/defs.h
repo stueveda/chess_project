@@ -1,7 +1,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-
+#include <string>
 // defines the size of the move history array
 #define MAXMOVES 2048
 #define MAXPOSITIONMOVES 256

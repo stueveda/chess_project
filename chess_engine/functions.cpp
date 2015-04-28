@@ -15,7 +15,7 @@ int countBits(U64 bb)
 	return total;
 }
 
-// this is broken for now, leave commented and fix later
+
 int popFirstSetBit(U64 &bb)
 {
 	if (bb == 0)
